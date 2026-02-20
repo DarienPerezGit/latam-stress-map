@@ -6,9 +6,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:seed": "tsx scripts/seed-countries.ts",
+    "backfill:fx": "tsx scripts/backfill/fx.ts",
+    "backfill:inflation": "tsx scripts/backfill/inflation.ts",
+    "backfill:sovereign": "tsx scripts/backfill/sovereign.ts",
+    "backfill:crypto": "tsx scripts/backfill/crypto.ts",
+    "backfill:reserves": "tsx scripts/backfill/reserves.ts",
+    "compute:normalization": "tsx scripts/compute-normalization.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
+    "axios": "^1.13.5",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.3.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
@@ -19,6 +30,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
