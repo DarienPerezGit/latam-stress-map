@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import StressMap from '@/components/StressMap'
+import StressMap from './components/StressMap'
 
 const REFRESH_INTERVAL = 3600000 // 1 hour
 
