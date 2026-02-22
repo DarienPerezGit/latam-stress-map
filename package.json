@@ -16,20 +16,25 @@
     "compute:normalization": "tsx scripts/compute-normalization.ts"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "@supabase/supabase-js": "^2.97.0",
     "axios": "^1.13.5",
     "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "three": "^0.183.1"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.183.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "topojson-client": "^3.1.0",
     "tsx": "^4.21.0",
     "typescript": "^5"
   }
