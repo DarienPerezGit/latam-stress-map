@@ -157,7 +157,7 @@ function DetailView({
             ? ` (${country.delta_7d > 0 ? '+' : ''}${country.delta_7d.toFixed(1)} in 7d)`
             : ''
         const text = `${country.country} macro stress: ${country.stress_score.toFixed(1)} ${level}${delta}`
-        const url = `https://macrostressmap.vercel.app/api/snapshot/${country.iso2}`
+        const url = `https://latam-stress-map.vercel.app/api/snapshot/${country.iso2}`
         const tweet = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
         window.open(tweet, '_blank', 'noopener,noreferrer')
     }
