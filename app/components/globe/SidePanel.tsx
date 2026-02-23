@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
+import { track } from '@vercel/analytics'
 import { getStressColor, getStressLevel } from './countryData'
 import SparklineChart from './SparklineChart'
 
@@ -86,7 +87,10 @@ function RankingView({
                             key={c.iso2}
                             className={`side-panel-row ${isCritical ? 'critical' : ''}`}
                             style={{ animationDelay: `${0.5 + i * 0.1}s`, cursor: 'pointer' }}
-                            onClick={() => onSelectCountry(c.iso2)}
+                            onClick={() => {
+                                track('country_selected', { iso2: c.iso2, score: c.stress_score, level, rank: c.rank })
+                                onSelectCountry(c.iso2)
+                            }}
                         >
                             <div className="side-panel-rank">#{c.rank}</div>
                             <div className="side-panel-iso">{c.iso2}</div>
@@ -159,6 +163,7 @@ function DetailView({
         const text = `${country.country} macro stress: ${country.stress_score.toFixed(1)} ${level}${delta}`
         const url = `https://latam-stress-map.vercel.app/api/snapshot/${country.iso2}`
         const tweet = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+        track('share_clicked', { iso2: country.iso2, score: country.stress_score, level })
         window.open(tweet, '_blank', 'noopener,noreferrer')
     }
 
