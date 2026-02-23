@@ -1,10 +1,10 @@
 {
-  "name": "app",
+  "name": "latam-stress-map",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 next build",
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx scripts/seed-countries.ts",
