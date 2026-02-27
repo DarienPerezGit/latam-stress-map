@@ -52,7 +52,7 @@ export async function GET(
         // ── 3. Fetch last 30 rows with stress_score ─────────────────────────
         const { data: rows, error: rowErr } = await supabase
             .from('metrics_daily')
-            .select('date, stress_score, fx_vol, inflation, risk_spread, crypto_ratio, reserves_change')
+            .select('date, stress_score, fx_vol, inflation, risk_spread, crypto_ratio, reserves_change, stablecoin_premium')
             .eq('country_id', country.id)
             .not('stress_score', 'is', null)
             .order('date', { ascending: false })
@@ -71,6 +71,7 @@ export async function GET(
                 risk_spread: row.risk_spread,
                 crypto_ratio: row.crypto_ratio,
                 reserves_change: row.reserves_change,
+                stablecoin_premium: row.stablecoin_premium,
             }
             const components = computeComponentScores(metrics, normParams)
 

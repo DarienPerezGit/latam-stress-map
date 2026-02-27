@@ -35,6 +35,12 @@ export interface ReservesResult {
     level: number  // total reserves in USD millions
 }
 
+export interface StablecoinPremiumResult {
+    date: string
+    premium: number       // (median_usdt_ars - official) / official * 100
+    source_count: number  // how many exchanges contributed to the median
+}
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY!
@@ -253,6 +259,73 @@ export async function fetchReservesImf(iso2: string): Promise<ReservesResult | n
         return { level: parseFloat(sorted[0]['@VALUE']) }
     } catch (err: any) {
         console.error(`[fetchers] IMF reserves failed for ${iso2}:`, err.message)
+        return null
+    }
+}
+
+// ─── Stablecoin Premium (daily, AR only) ──────────────────────────────────────
+
+/**
+ * Fetch the USDT P2P premium vs official FX rate.
+ * Uses CriptoYa aggregator (free, no auth).
+ * Only meaningful for Argentina — returns null for all other countries.
+ *
+ * CriptoYa /api/usdt/ars returns:
+ *   { "exchange": { "ask": N, "bid": N, "totalAsk": N, "totalBid": N, "time": N }, ... }
+ * We take the median of all `totalAsk` values as the representative P2P price.
+ */
+export async function fetchStablecoinPremium(
+    iso2: string,
+    officialFxClose: number
+): Promise<StablecoinPremiumResult | null> {
+    if (iso2 !== 'AR') return null
+    if (!officialFxClose || officialFxClose <= 0) return null
+
+    try {
+        const url = 'https://criptoya.com/api/usdt/ars'
+        const { data } = await axios.get(url, {
+            timeout: TIMEOUT,
+            headers: { 'Accept': 'application/json' },
+        })
+
+        if (!data || typeof data !== 'object') {
+            console.error('[fetchers] CriptoYa: unexpected response shape')
+            return null
+        }
+
+        // Extract totalAsk from each exchange (the actual cost to buy 1 USDT in ARS)
+        const prices: number[] = []
+        for (const [exchange, info] of Object.entries(data)) {
+            // Skip non-exchange keys (e.g. "time")
+            if (!info || typeof info !== 'object') continue
+            const entry = info as Record<string, unknown>
+            const totalAsk = entry['totalAsk']
+            if (typeof totalAsk === 'number' && totalAsk > 0) {
+                prices.push(totalAsk)
+            }
+        }
+
+        if (prices.length < 2) {
+            console.error(`[fetchers] CriptoYa: only ${prices.length} exchange(s) returned data`)
+            return null
+        }
+
+        // Median
+        prices.sort((a, b) => a - b)
+        const mid = Math.floor(prices.length / 2)
+        const median = prices.length % 2 === 0
+            ? (prices[mid - 1] + prices[mid]) / 2
+            : prices[mid]
+
+        // Premium = (median_usdt_ars - official_usd_ars) / official_usd_ars * 100
+        const premium = Math.round(((median - officialFxClose) / officialFxClose) * 100 * 100) / 100
+        const today = new Date().toISOString().split('T')[0]
+
+        console.log(`  [fetchers] AR stablecoin premium: ${premium}% (median ${median} vs official ${officialFxClose}, ${prices.length} sources)`)
+
+        return { date: today, premium, source_count: prices.length }
+    } catch (err: any) {
+        console.error('[fetchers] CriptoYa failed:', err.message)
         return null
     }
 }

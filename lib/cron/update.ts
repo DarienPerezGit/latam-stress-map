@@ -23,6 +23,7 @@ import {
     fetchSovereignFred,
     fetchSovereignImf,
     fetchReservesImf,
+    fetchStablecoinPremium,
     FRED_SOVEREIGN_SERIES,
 } from './fetchers'
 import { computeStressScore, computeComponentScores, type RawMetrics, type NormParam, type MetricName } from './compute'
@@ -139,7 +140,7 @@ export async function runDailyUpdate(): Promise<PipelineResult> {
         // Each monthly column is queried independently — the most recent row may
         // have NULL for inflation/sovereign/reserves if it was a FX-only daily upsert.
         // This ensures correct forward-fill even on non-monthly cron runs.
-        const [lastInflRow, lastSovRow, lastResRow] = await Promise.all([
+        const [lastInflRow, lastSovRow, lastResRow, lastStablecoinRow] = await Promise.all([
             supabase
                 .from('metrics_daily')
                 .select('inflation_yoy, inflation')
@@ -164,7 +165,32 @@ export async function runDailyUpdate(): Promise<PipelineResult> {
                 .order('date', { ascending: false })
                 .limit(1)
                 .maybeSingle(),
+            // Stablecoin premium forward-fill (AR only, but query is harmless for others)
+            supabase
+                .from('metrics_daily')
+                .select('stablecoin_premium')
+                .eq('country_id', countryId)
+                .not('stablecoin_premium', 'is', null)
+                .order('date', { ascending: false })
+                .limit(1)
+                .maybeSingle(),
         ])
+
+        // ── 5b2. Fetch stablecoin premium (daily, AR only) ────────────────────────
+        let stablecoin_premium: number | null = lastStablecoinRow.data?.stablecoin_premium ?? null
+        if (fxDay) {
+            const stablecoinResult = await fetchStablecoinPremium(iso2, fxDay.close)
+            if (stablecoinResult) {
+                stablecoin_premium = stablecoinResult.premium
+                countryFlags['stablecoin_sources'] = stablecoinResult.source_count
+            } else if (iso2 === 'AR' && stablecoin_premium !== null) {
+                // Forward-fill: CriptoYa failed but we have a previous value
+                countryFlags['stablecoin_premium'] = 'forward_filled'
+            } else if (iso2 === 'AR') {
+                missing.push('stablecoin_premium')
+                countryFlags['stablecoin_premium'] = 'fetch_failed'
+            }
+        }
 
         // ── 5c. Fetch FX volatility (30d rolling) from recent closes ─────────────
         // For the cron we compute vol from the last 31 fx_close values in DB
@@ -265,6 +291,7 @@ export async function runDailyUpdate(): Promise<PipelineResult> {
             risk_spread: risk_spread,
             crypto_ratio: cryptoDay?.crypto_ratio ?? null,
             reserves_change: reserves_change,
+            stablecoin_premium: stablecoin_premium,
         }
 
         // ── 5f. Compute stress score ──────────────────────────────────────────────
@@ -288,6 +315,7 @@ export async function runDailyUpdate(): Promise<PipelineResult> {
             ...(sovereign_yield !== null && { sovereign_yield }),
             ...(us10y !== null && { us_10y: us10y }),
             ...(reserves_level !== null && { reserves_level }),
+            ...(stablecoin_premium !== null && { stablecoin_premium }),
             // Derived
             ...(fx_vol !== null && { fx_vol }),
             ...(inflation !== null && { inflation }),

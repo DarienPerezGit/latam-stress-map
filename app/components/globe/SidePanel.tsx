@@ -35,6 +35,7 @@ const METRIC_CONFIG = [
     { key: 'risk_spread', label: 'Sovereign Risk', color: '#ef4444' },
     { key: 'crypto_ratio', label: 'Crypto Hedge', color: '#8b5cf6' },
     { key: 'reserves_change', label: 'Reserves', color: '#10b981' },
+    { key: 'stablecoin_premium', label: 'Stablecoin Premium', color: '#06b6d4' },
 ]
 
 const MAX_VISIBLE = 10
@@ -214,7 +215,14 @@ function DetailView({
                     <div className="detail-loading">LOADING...</div>
                 ) : (
                     METRIC_CONFIG.map(({ key, label, color: metricColor }) => {
+                        const currentValue = country.components[key] ?? null
                         const series = history?.map(h => h.components[key] ?? null) ?? []
+                        const hasAnyData = currentValue !== null || series.some(v => v !== null)
+
+                        // Don't render the row at all if this metric has no data for this country
+                        // (e.g. stablecoin_premium is null for all non-AR countries)
+                        if (!hasAnyData) return null
+
                         return (
                             <SparklineChart
                                 key={key}

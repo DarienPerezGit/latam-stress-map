@@ -22,14 +22,18 @@ export type MetricName =
     | 'risk_spread'
     | 'crypto_ratio'
     | 'reserves_change'
+    | 'stablecoin_premium'
 
 // Canonical weights — must sum to 1.0
+// stablecoin_premium is AR-only; for other countries it's null and its 0.15
+// weight gets redistributed automatically by the weight redistribution rule.
 export const WEIGHTS: Record<MetricName, number> = {
-    fx_vol: 0.30,
+    fx_vol: 0.25,
     inflation: 0.20,
     risk_spread: 0.20,
-    crypto_ratio: 0.15,
-    reserves_change: 0.15,
+    crypto_ratio: 0.10,
+    reserves_change: 0.10,
+    stablecoin_premium: 0.15,
 }
 
 export interface NormParam {
@@ -44,6 +48,7 @@ export interface RawMetrics {
     risk_spread?: number | null
     crypto_ratio?: number | null
     reserves_change?: number | null
+    stablecoin_premium?: number | null
 }
 
 export interface StressResult {

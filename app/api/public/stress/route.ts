@@ -57,7 +57,7 @@ export async function GET() {
             // Latest row
             const { data: latest } = await supabase
                 .from('metrics_daily')
-                .select('date, stress_score, fx_vol, inflation, risk_spread, crypto_ratio, reserves_change, data_flags')
+                .select('date, stress_score, fx_vol, inflation, risk_spread, crypto_ratio, reserves_change, stablecoin_premium, data_flags')
                 .eq('country_id', country.id)
                 .not('stress_score', 'is', null)
                 .order('date', { ascending: false })
@@ -95,6 +95,7 @@ export async function GET() {
                 risk_spread: latest.risk_spread,
                 crypto_ratio: latest.crypto_ratio,
                 reserves_change: latest.reserves_change,
+                stablecoin_premium: latest.stablecoin_premium,
             }
             const components = computeComponentScores(metrics, normParams)
             const flags = (latest.data_flags ?? {}) as Record<string, unknown>
