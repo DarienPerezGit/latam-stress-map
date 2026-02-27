@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useMemo, Suspense } from 'react'
+import React, { useRef, useMemo, Suspense, useState, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Stars, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
@@ -106,7 +106,7 @@ function CyberpunkGlobe() {
 
 // ─── Cinematic Camera Controller ─────────────────────────────────────────────
 
-function CameraController() {
+function CameraController({ yOffset = 0 }: { yOffset?: number }) {
     const { camera } = useThree()
     const startTime = useRef(Date.now())
     const introComplete = useRef(false)
@@ -131,10 +131,10 @@ function CameraController() {
 
             camera.position.set(
                 dist * Math.cos(targetLat) * Math.sin(targetLng) * -1,
-                dist * Math.sin(targetLat) * -0.3,
+                dist * Math.sin(targetLat) * -0.3 + yOffset,
                 dist * Math.cos(targetLat) * Math.cos(targetLng)
             )
-            camera.lookAt(0, 0, 0)
+            camera.lookAt(0, yOffset, 0)
         } else {
             introComplete.current = true
         }
@@ -158,6 +158,9 @@ function SceneLighting() {
 
 // ─── Main 3D Scene (inside Canvas) ───────────────────────────────────────────
 
+// Mobile Y-offset: shift globe up so Southern Cone isn't hidden by UI panel
+const MOBILE_Y_OFFSET = 1.2
+
 function Scene({
     data,
     onHover,
@@ -167,7 +170,12 @@ function Scene({
     onHover: (country: CountryStress | null, worldPos: THREE.Vector3 | null) => void
     onSelect?: (iso2: string) => void
 }) {
+    const { size } = useThree()
     const globeGroupRef = useRef<THREE.Group>(null!)
+
+    // Responsive: detect portrait / narrow viewport
+    const isMobile = size.width < 768 || size.width / size.height < 1
+    const yOffset = isMobile ? MOBILE_Y_OFFSET : 0
 
     // Single rotation for globe + borders + markers — all in sync
     useFrame(({ clock }) => {
@@ -176,9 +184,12 @@ function Scene({
         }
     })
 
+    // Memoize the OrbitControls target to avoid creating a new Vector3 every render
+    const orbitTarget = useMemo(() => new THREE.Vector3(0, yOffset, 0), [yOffset])
+
     return (
         <>
-            <CameraController />
+            <CameraController yOffset={yOffset} />
             <SceneLighting />
 
             <Stars
@@ -191,18 +202,21 @@ function Scene({
                 speed={0.5}
             />
 
-            {/* Single rotating group: globe + borders + markers */}
-            <group ref={globeGroupRef}>
-                <CyberpunkGlobe />
-                <StressMarkers
-                    data={data}
-                    globeRadius={GLOBE_RADIUS}
-                    onHover={onHover}
-                    onSelect={onSelect}
-                />
-            </group>
+            {/* Parent group: shifts everything up on mobile */}
+            <group position={[0, yOffset, 0]}>
+                {/* Single rotating group: globe + borders + markers */}
+                <group ref={globeGroupRef}>
+                    <CyberpunkGlobe />
+                    <StressMarkers
+                        data={data}
+                        globeRadius={GLOBE_RADIUS}
+                        onHover={onHover}
+                        onSelect={onSelect}
+                    />
+                </group>
 
-            <AtmosphereGlow />
+                <AtmosphereGlow />
+            </group>
 
             <OrbitControls
                 enablePan={false}
@@ -213,6 +227,7 @@ function Scene({
                 enableDamping
                 dampingFactor={0.05}
                 rotateSpeed={0.5}
+                target={orbitTarget}
             />
         </>
     )
